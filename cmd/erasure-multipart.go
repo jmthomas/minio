@@ -390,7 +390,13 @@ func (er erasureObjects) newMultipartUpload(ctx context.Context, bucket string, 
 		if err == nil && opts.CheckPrecondFn(obj) {
 			return nil, PreConditionFailed{}
 		}
-		if err != nil && !isErrVersionNotFound(err) && !isErrObjectNotFound(err) && !isErrReadQuorum(err) {
+		if err != nil && !isErrVersionNotFound(err) && !isErrObjectNotFound(err) {
+			return nil, err
+		}
+
+		// if object doesn't exist return error for If-Match conditional requests
+		// If-None-Match should be allowed to proceed for non-existent objects
+		if err != nil && opts.HasIfMatch && (isErrObjectNotFound(err) || isErrVersionNotFound(err)) {
 			return nil, err
 		}
 	}
@@ -1108,7 +1114,13 @@ func (er erasureObjects) CompleteMultipartUpload(ctx context.Context, bucket str
 		if err == nil && opts.CheckPrecondFn(obj) {
 			return ObjectInfo{}, PreConditionFailed{}
 		}
-		if err != nil && !isErrVersionNotFound(err) && !isErrObjectNotFound(err) && !isErrReadQuorum(err) {
+		if err != nil && !isErrVersionNotFound(err) && !isErrObjectNotFound(err) {
+			return ObjectInfo{}, err
+		}
+
+		// if object doesn't exist return error for If-Match conditional requests
+		// If-None-Match should be allowed to proceed for non-existent objects
+		if err != nil && opts.HasIfMatch && (isErrObjectNotFound(err) || isErrVersionNotFound(err)) {
 			return ObjectInfo{}, err
 		}
 	}
